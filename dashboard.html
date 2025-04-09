@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamFlux Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #6610f2;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: white !important;
+        }
+        .stats-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            height: 100%;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .card-header {
+            font-weight: bold;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .anomaly-row {
+            background-color: rgba(255, 193, 7, 0.2);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .refresh-time {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 0.2em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+        }
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .sensor-unit {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        .anomaly-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+        .normal-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-activity"></i> StreamFlux Dashboard
+            </a>
+            <div class="d-flex">
+                <span class="text-white refresh-time">Last updated: <span id="last-update">Never</span> <span id="loading-indicator" class="loading-spinner"></span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Summary Stats -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="stats-card card bg-white">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-thermometer"></i> Sensor Data
+                    </div>
+                    <div class="card-body">
+                        <h2 id="sensor-count">-</h2>
+                        <p>Total readings</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span id="sensor-anomalies-percent">-</span>
+                            <span id="sensor-anomalies" class="anomaly-badge">- anomalies</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card card bg-white">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-chat"></i> Social Data
+                    </div>
+                    <div class="card-body">
+                        <h2 id="social-count">-</h2>
+                        <p>Total posts</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span id="social-anomalies-percent">-</span>
+                            <span id="social-anomalies" class="anomaly-badge">- anomalies</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="stats-card card bg-white">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-graph-up"></i> Market Data
+                    </div>
+                    <div class="card-body">
+                        <h2 id="market-count">-</h2>
+                        <p>Total updates</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span id="market-anomalies-percent">-</span>
+                            <span id="market-anomalies" class="anomaly-badge">- anomalies</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Readings -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-white">
+                    <div class="card-header bg-dark text-white">
+                        Latest Sensor Readings
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="sensor-readings-container">
+                            <!-- Will be populated by JavaScript -->
+                            <div class="col-md-4 mb-3">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h5>Loading...</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card bg-white">
+                    <div class="card-header bg-primary text-white">
+                        Temperature Over Time
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card bg-white">
+                    <div class="card-header bg-success text-white">
+                        Market Price Changes
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="marketChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Anomalies -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-white">
+                    <div class="card-header bg-danger text-white">
+                        Recent Anomalies
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Source</th>
+                                        <th>Details</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anomalies-table-body">
+                                    <!-- Will be populated by JavaScript -->
+                                    <tr>
+                                        <td colspan="4" class="text-center">Loading anomalies...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5000';
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+
+        // Chart references
+        let temperatureChart;
+        let marketChart;
+
+        // Initialize charts
+        function initCharts() {
+            // Temperature Chart
+            const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    },
+                    animation: {
+                        duration: 500
+                    }
+                }
+            });
+
+            // Market Chart
+            const marketCtx = document.getElementById('marketChart').getContext('2d');
+            marketChart = new Chart(marketCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Price Change (%)',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    },
+                    animation: {
+                        duration: 500
+                    }
+                }
+            });
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString();
+        }
+
+        // Update dashboard data
+        async function updateDashboard() {
+            document.getElementById('loading-indicator').style.display = 'inline-block';
+            
+            try {
+                // Fetch metrics
+                const metricsResponse = await fetch(`${API_BASE_URL}/metrics`);
+                const metrics = await metricsResponse.json();
+                
+                // Update metrics display
+                updateMetricsDisplay(metrics);
+                
+                // Fetch latest sensor readings
+                const sensorResponse = await fetch(`${API_BASE_URL}/data/sensor_data?limit=3`);
+                const sensorData = await sensorResponse.json();
+                updateSensorReadings(sensorData.data);
+                
+                // Fetch temperature data for chart
+                const tempResponse = await fetch(`${API_BASE_URL}/data/sensor_data?limit=10`);
+                const tempData = await tempResponse.json();
+                updateTemperatureChart(tempData.data.filter(d => d.sensor_type === 'temperature'));
+                
+                // Fetch market data for chart
+                const marketResponse = await fetch(`${API_BASE_URL}/data/market_data?limit=10`);
+                const marketData = await marketResponse.json();
+                updateMarketChart(marketData.data);
+                
+                // Fetch anomalies
+                const anomaliesResponse = await fetch(`${API_BASE_URL}/anomalies?limit=5`);
+                const anomalies = await anomaliesResponse.json();
+                updateAnomaliesTable(anomalies.anomalies);
+                
+                // Update last update time
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            } finally {
+                document.getElementById('loading-indicator').style.display = 'none';
+            }
+        }
+
+        // Update metrics display
+        function updateMetricsDisplay(metrics) {
+            // Sensor data
+            const sensorData = metrics.data_counts.find(d => d.source === 'sensor_data') || {count: 0, anomalies: 0};
+            document.getElementById('sensor-count').textContent = sensorData.count.toLocaleString();
+            document.getElementById('sensor-anomalies').textContent = `${sensorData.anomalies} anomalies`;
+            document.getElementById('sensor-anomalies-percent').textContent = 
+                `${((sensorData.anomalies / Math.max(sensorData.count, 1)) * 100).toFixed(1)}% anomaly rate`;
+            
+            // Social data
+            const socialData = metrics.data_counts.find(d => d.source === 'social_data') || {count: 0, anomalies: 0};
+            document.getElementById('social-count').textContent = socialData.count.toLocaleString();
+            document.getElementById('social-anomalies').textContent = `${socialData.anomalies} anomalies`;
+            document.getElementById('social-anomalies-percent').textContent = 
+                `${((socialData.anomalies / Math.max(socialData.count, 1)) * 100).toFixed(1)}% anomaly rate`;
+            
+            // Market data
+            const marketData = metrics.data_counts.find(d => d.source === 'market_data') || {count: 0, anomalies: 0};
+            document.getElementById('market-count').textContent = marketData.count.toLocaleString();
+            document.getElementById('market-anomalies').textContent = `${marketData.anomalies} anomalies`;
+            document.getElementById('market-anomalies-percent').textContent = 
+                `${((marketData.anomalies / Math.max(marketData.count, 1)) * 100).toFixed(1)}% anomaly rate`;
+        }
+
+        // Update sensor readings display
+        function updateSensorReadings(readings) {
+            const container = document.getElementById('sensor-readings-container');
+            container.innerHTML = '';
+            
+            readings.forEach(reading => {
+                const cardHtml = `
+                    <div class="col-md-4 mb-3">
+                        <div class="card ${reading.is_anomaly ? 'bg-light border-warning' : 'bg-light'}">
+                            <div class="card-body text-center">
+                                <h5>${reading.sensor_type} (${reading.location})</h5>
+                                <div class="sensor-value">${reading.value}<span class="sensor-unit">${reading.unit}</span></div>
+                                <p class="mb-0">
+                                    ${reading.is_anomaly ? 
+                                        '<span class="anomaly-badge">ANOMALY</span>' : 
+                                        '<span class="normal-badge">NORMAL</span>'}
+                                </p>
+                                <small class="text-muted">${formatTimestamp(reading.timestamp)}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+
+        // Update temperature chart
+        function updateTemperatureChart(data) {
+            if (!data || data.length === 0) return;
+            
+            // Process and sort data by timestamp
+            const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            // Update chart data
+            temperatureChart.data.labels = sortedData.map(d => formatTimestamp(d.timestamp));
+            temperatureChart.data.datasets[0].data = sortedData.map(d => d.value);
+            
+            // Highlight anomalies with different point styles
+            temperatureChart.data.datasets[0].pointBackgroundColor = sortedData.map(d => 
+                d.is_anomaly ? 'rgb(255, 99, 132)' : 'rgb(75, 192, 192)');
+            temperatureChart.data.datasets[0].pointRadius = sortedData.map(d => 
+                d.is_anomaly ? 6 : 3);
+            
+            temperatureChart.update();
+        }
+
+        // Update market chart
+        function updateMarketChart(data) {
+            if (!data || data.length === 0) return;
+            
+            // Process and sort data by timestamp
+            const sortedData = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            // Update chart data
+            marketChart.data.labels = sortedData.map(d => formatTimestamp(d.timestamp));
+            marketChart.data.datasets[0].data = sortedData.map(d => d.price_change_percent);
+            
+            // Highlight anomalies with different point styles
+            marketChart.data.datasets[0].pointBackgroundColor = sortedData.map(d => 
+                d.is_anomaly ? 'rgb(255, 99, 132)' : 'rgb(75, 192, 192)');
+            marketChart.data.datasets[0].pointRadius = sortedData.map(d => 
+                d.is_anomaly ? 6 : 3);
+            
+            marketChart.update();
+        }
+
+        // Update anomalies table
+        function updateAnomaliesTable(anomalies) {
+            const tableBody = document.getElementById('anomalies-table-body');
+            tableBody.innerHTML = '';
+            
+            if (!anomalies || anomalies.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">No anomalies detected</td></tr>';
+                return;
+            }
+            
+            anomalies.forEach(anomaly => {
+                let details = '';
+                let value = '';
+                
+                // Format details based on source
+                if (anomaly.source === 'sensor_simulator') {
+                    details = `${anomaly.sensor_type} sensor in ${anomaly.location}`;
+                    value = `${anomaly.value} ${anomaly.unit}`;
+                } else if (anomaly.source === 'social_feed_simulator') {
+                    details = `User post with ${anomaly.sentiment} sentiment about ${anomaly.topic}`;
+                    value = `Engagement: ${anomaly.engagement_count}`;
+                } else if (anomaly.source === 'market_data_simulator') {
+                    details = `${anomaly.symbol} (${anomaly.sector})`;
+                    value = `${anomaly.price_change_percent}% (${anomaly.price})`;
+                }
+                
+                const rowHtml = `
+                    <tr class="anomaly-row">
+                        <td>${formatTimestamp(anomaly.timestamp)}</td>
+                        <td>${anomaly.source.replace('_simulator', '')}</td>
+                        <td>${details}</td>
+                        <td>${value}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += rowHtml;
+            });
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            updateDashboard();
+            setInterval(updateDashboard, REFRESH_INTERVAL);
+        });
+    </script>
+</body>
+</html>

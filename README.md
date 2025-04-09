@@ -2,7 +2,7 @@
 
 A real-time data streaming and anomaly detection system that processes and analyzes data from multiple sources.
 
-<!-- ![StreamFlux Dashboard](have to add image) -->
+![StreamFlux Dashboard](Dashboard1.png)
 
 ## Overview
 
