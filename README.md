@@ -25,8 +25,6 @@ The system consists of several components:
 3. **API Server**: Flask-based REST API for accessing the data
 4. **Anomaly Detection**: Statistical algorithms to identify unusual data points
 
-![StreamFlux Dashboard](image.png)
-
 ## Getting Started
 
 ### Prerequisites
