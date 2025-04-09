@@ -14,14 +14,21 @@ from kafka_layer.producer import KafkaProducer
 
 class MarketDataSimulator:
     """Simulates financial market data streams"""
-    
     def __init__(self, num_symbols=20, kafka_topic="market-data"):
         self.num_symbols = num_symbols
         self.kafka_topic = kafka_topic
         self.producer = KafkaProducer()
-        self.market_symbols = self._initialize_symbols()
         self.start_time = datetime.now()
-        self.last_market_update = {}
+        self.last_market_update = {}  
+        self.market_symbols = self._initialize_symbols()
+    
+    # def __init__(self, num_symbols=20, kafka_topic="market-data"):
+    #     self.num_symbols = num_symbols
+    #     self.kafka_topic = kafka_topic
+    #     self.producer = KafkaProducer()
+    #     self.market_symbols = self._initialize_symbols()
+    #     self.start_time = datetime.now()
+    #     self.last_market_update = {}
         
     def _initialize_symbols(self):
         """Create a set of market symbols with initial prices"""

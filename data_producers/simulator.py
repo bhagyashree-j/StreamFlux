@@ -82,6 +82,11 @@ if __name__ == "__main__":
     manager.add_simulator(social_simulator, interval=0.1, duration=args.duration)
     manager.add_simulator(market_simulator, interval=0.5, duration=args.duration)
     
+    def signal_handler(sig, frame):
+        print("Signal received, stopping simulators...")
+        manager.stop_all()
+        sys.exit(0)
+
     # Register signal handler for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     

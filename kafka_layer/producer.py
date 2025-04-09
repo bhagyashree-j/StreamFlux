@@ -1,6 +1,7 @@
 import json
 import logging
-from kafka import KafkaProducer
+import time
+from kafka import KafkaProducer as BaseKafkaProducer
 from .config import KAFKA_CONFIG
 
 logging.basicConfig(level=logging.INFO)
@@ -14,28 +15,36 @@ class KafkaProducer:
         servers = bootstrap_servers or KAFKA_CONFIG['bootstrap.servers']
         
         try:
-            self.producer = KafkaProducer(
+            # Create a producer with compatible parameters
+            self.producer = BaseKafkaProducer(
                 bootstrap_servers=servers,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-                key_serializer=lambda k: k.encode('utf-8') if isinstance(k, str) else json.dumps(k).encode('utf-8')
+                # Use custom serializers instead of the keyword args
+                api_version=(1, 0, 0)  # Use an older, more compatible API version
             )
             logger.info(f"Kafka producer connected to {servers}")
         except Exception as e:
             logger.error(f"Failed to create Kafka producer: {str(e)}")
+            self.producer = None
             raise
     
     def send(self, topic, value, key=None, partition=None, headers=None):
         """Send a message to a Kafka topic"""
         try:
+            if self.producer is None:
+                logger.error("Producer is not initialized")
+                return None
+                
+            # Manually serialize the data
+            value_bytes = json.dumps(value).encode('utf-8')
+            key_bytes = key.encode('utf-8') if isinstance(key, str) else json.dumps(key).encode('utf-8') if key else None
+            
             future = self.producer.send(
                 topic=topic,
-                value=value,
-                key=key,
+                value=value_bytes,
+                key=key_bytes,
                 partition=partition,
                 headers=headers
             )
-            # Wait for message to be sent (optional, can be removed for higher throughput)
-            # future.get(timeout=10)
             return future
         except Exception as e:
             logger.error(f"Error sending message to topic {topic}: {str(e)}")
@@ -43,8 +52,10 @@ class KafkaProducer:
     
     def flush(self):
         """Flush all pending messages"""
-        self.producer.flush()
+        if self.producer:
+            self.producer.flush()
     
     def close(self):
         """Close the producer connection"""
-        self.producer.close()
+        if self.producer:
+            self.producer.close()

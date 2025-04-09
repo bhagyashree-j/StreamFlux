@@ -1,6 +1,6 @@
 import json
 import logging
-from kafka import KafkaConsumer
+from kafka.consumer import KafkaConsumer
 from .config import KAFKA_CONFIG
 
 logging.basicConfig(level=logging.INFO)
